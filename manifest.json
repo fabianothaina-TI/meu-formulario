@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Preenchedor de Ordem de Serviço",
+  "version": "1.0",
+  "description": "Captura informações da página ativa e preenche o formulário de OS.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

@@ -1,0 +1,19 @@
+function executarInjecao() {
+    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        if (!tabs || !tabs[0]) return;
+        
+        chrome.scripting.executeScript({
+            target: {tabId: tabs[0].id},
+            func: extrairDadosDaPagina
+        }, (results) => {
+            if (results && results[0] && results[0].result) {
+                const dados = results[0].result;
+                if(dados.cidade) document.getElementById('cidade').value = dados.cidade;
+                if(dados.rede) document.getElementById('rede').value = dados.rede; // Linha adicionada/verificada
+                if(dados.coordenadas) document.getElementById('coordenadas').value = dados.coordenadas;
+                if(dados.chat) document.getElementById('chat').value = dados.chat;
+                if(dados.os_ri) document.getElementById('os_ri').value = dados.os_ri;
+            }
+        });
+    });
+}

@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Script de Chamado</title>
+    
+    <!-- Importação do Mapa (Leaflet CSS e JS) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        /* --- VARIÁVEIS DE TEMA (CORES) --- */
+        :root {
+            --bg-body: #f0f4f8;
+            --bg-container: #ffffff;
+            --bg-input: #ffffff;
+            --bg-card: #f8fafc;
+            --text-main: #333333;
+            --text-label: #444444;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --border-dashed: #cccccc;
+            --accent-blue: #0078d4;
+            --accent-blue-hover: #005a9e;
+            --modal-bg: rgba(0, 0, 0, 0.6);
+            --map-filter: none;
+        }
+
+        body.dark-mode {
+            --bg-body: #121212;
+            --bg-container: #1e1e1e;
+            --bg-input: #2a2a2a;
+            --bg-card: #252525;
+            --text-main: #e0e0e0;
+            --text-label: #b0b0b0;
+            --text-muted: #888888;
+            --border-color: #3d3d3d;
+            --border-dashed: #444444;
+            --accent-blue: #3b9dec;
+            --accent-blue-hover: #2b7bc0;
+            --modal-bg: rgba(0, 0, 0, 0.8);
+            --map-filter: brightness(0.8) contrast(1.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .container {
+            max-width: 650px;
+            background: var(--bg-container);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin: 0 auto;
+            transition: background-color 0.3s ease;
+        }
+        
+        /* Cabeçalho e Botão de Tema */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent-blue);
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            margin: 0;
+            color: var(--accent-blue);
+            font-size: 22px;
+        }
+        .theme-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .theme-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* --- ESTILOS DAS ABAS (TABS) --- */
+        .tab-header {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+            border-radius: 0;
+        }
+        .tab-btn:hover {
+            color: var(--accent-blue);
+            background-color: var(--bg-card);
+        }
+        .tab-btn.active {
+            color: var(--accent-blue);
+            border-bottom: 3px solid var(--accent-blue);
+        }
+        .aba-content {
+            display: none;
+        }
+        .aba-content.active {
+            display: block;
+        }
+        
+        /* --- ESTILOS DO HISTÓRICO --- */
+        .historico-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .historico-data-titulo {
+            font-size: 16px;
+            color: var(--accent-blue);
+            margin-top: 0;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .badge-qtd {
+            background-color: #107c41;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+        }
+        .historico-item {
+            font-size: 13px;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border-dashed);
+            display: flex;
+            justify-content: space-between;
+        }
+        .historico-item:last-child {
+            border-bottom: none;
+        }
+        .btn-limpar-hist {
+            background-color: var(--bg-card);
+            color: #d13438;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            width: 100%;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .btn-limpar-hist:hover {
+            background-color: #d13438;
+            color: white;
+            border-color: #d13438;
+        }
+        .vazio-msg {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 20px;
+            font-style: italic;
+        }
+        .ticket-link {
+            color: var(--accent-blue);
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .ticket-link:hover {
+            color: var(--accent-blue-hover);
+        }
+
+        /* --- ESTILOS DO MODAL (SEGUNDO PLANO) --- */
+        .modal-overlay {
+            display: none; 
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--modal-bg);
+            z-index: 9999;
+            align-items: center; 
+            justify-content: center;
+        }
+        .modal-content {
+            background: var(--bg-container);
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 550px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 12px; right: 18px;
+            cursor: pointer;
+            font-size: 24px;
+            color: var(--text-muted);
+        }
+        .modal-close:hover {
+            color: var(--text-main);
+        }
+
+        /* --- ESTILOS DO FORMULÁRIO --- */
+        .secao-titulo {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--accent-blue);
+            margin: 20px 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px dashed var(--border-dashed);
+            padding-bottom: 4px;
+        }
+        .campo-grupo {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .label {
+            font-weight: bold;
+            width: 240px;
+            color: var(--text-label);
+            font-size: 14px;
+        }
+        input[type="text"], select, input[type="file"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: var(--bg-input);
+            color: var(--text-main);
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus, select:focus {
+            border-color: var(--accent-blue);
+            outline: none;
+            box-shadow: 0 0 5px rgba(0,120,212,0.3);
+        }
+        .btn-container {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+        }
+        .btn-copiar {
+            background-color: var(--accent-blue);
+            flex: 1;
+            padding: 14px;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-copiar:hover {
+            background-color: var(--accent-blue-hover);
+        }
+        .btn-limpar {
+            background-color: #d13438;
+            max-width: 150px;
+            flex: 1;
+            padding: 14px;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-limpar:hover {
+            background-color: #a80000;
+        }
+        .alerta, .status-bd {
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .alerta {
+            display: none;
+            color: #107c41;
+            background-color: #daf2e4;
+        }
+        .status-bd {
+            color: #856404;
+            background-color: #fff3cd;
+            margin-bottom: 20px;
+        }
+        .status-ok {
+            color: #155724 !important;
+            background-color: #d4edda !important;
+        }
+        .msg-distancia {
+            font-size: 13px;
+            color: #107c41;
+            font-weight: bold;
+            margin-top: -8px;
+            margin-bottom: 12px;
+            margin-left: 240px;
+            display: none;
+        }
+        h3 {
+            margin-top: 30px;
+            color: var(--text-label);
+            font-size: 16px;
+        }
+        textarea {
+            width: 100%;
+            height: 280px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            resize: vertical;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+        #mapa_container {
+            display: none;
+            margin-top: 20px;
+            margin-bottom: 25px;
+            width: 100%; 
+        }
+        #mapa {
+            height: 300px;
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            z-index: 1; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+            filter: var(--map-filter); 
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- CABEÇALHO COM TÍTULO E BOTÃO DE TEMA -->
+    <div class="header-container">
+        <h2>Sistema de Chamados</h2>
+        <button id="btn-tema" class="theme-btn" onclick="alternarTema()" title="Alternar Tema Claro/Escuro">🌙</button>
+    </div>
+    
+    <!-- MENU DE ABAS -->
+    <div class="tab-header">
+        <button id="btn-formulario" class="tab-btn active" onclick="mudarAba('formulario')">📝 Formulário</button>
+        <button id="btn-historico" class="tab-btn" onclick="mudarAba('historico')">📊 Histórico</button>
+    </div>
+
+    <div id="status_bd" class="status-bd">A aguardar importação da base de dados (JSON)...</div>
+
+    <!-- ABA 1: FORMULÁRIO -->
+    <div id="aba-formulario" class="aba-content active">
+        
+        <div id="upload_container">
+            <div class="secao-titulo">Carregar Base de Dados</div>
+            <div class="campo-grupo">
+                <span class="label">FICHEIRO JSON:</span> 
+                <input type="file" id="arquivo_json" accept=".json" onchange="carregarBaseJSON(event)">
+            </div>
+        </div>
+
+        <!-- NOVO CAMPO: IMPORTAÇÃO DE SCRIPT -->
+        <div class="secao-titulo">Importação Rápida</div>
+        <div class="campo-grupo" style="display: block;">
+            <textarea id="script_entrada" placeholder="Cole o script do atendimento aqui para preenchimento automático..." oninput="processarScriptEntrada()" style="height: 120px; margin-bottom: 10px; font-weight: normal;"></textarea>
+        </div>
+
+        <div class="secao-titulo">Dados Principais</div>
+        <div class="campo-grupo"><span class="label">TICKET:</span> <input type="text" id="ticket" oninput="atualizarVisualizacao()"></div>
+        <div class="campo-grupo"><span class="label">OS R.E:</span> <input type="text" id="os_re" oninput="atualizarVisualizacao()"></div>
+        <div class="campo-grupo"><span class="label">CHAT:</span> <input type="text" id="chat" oninput="atualizarVisualizacao()"></div>
+        
+        <!-- O campo TEC chama formataCampoMaiuscula() -->
+        <div class="campo-grupo"><span class="label">TEC:</span> <input type="text" id="tec" oninput="formataCampoMaiuscula(this); atualizarVisualizacao();"></div>
+        <div class="campo-grupo"><span class="label">CIDADE:</span> <input type="text" id="cidade" oninput="atualizarVisualizacao()"></div>
+        
+        <div class="secao-titulo">Detalhes da Ocorrência</div>
+        <div class="campo-grupo">
+            <span class="label">DESCRIÇÃO DO PROBLEMA:</span> 
+            <select id="desc_problema" onchange="atualizarVisualizacao()">
+                <option value="" disabled selected>Selecione uma opção...</option>
+                <option value="CTO/SMAP SEM SINAL">CTO/SMAP SEM SINAL</option>
+                <option value="FALHA EM REDE RADIO">FALHA EM REDE RADIO</option>
+                <option value="CTO/SMAP SINAL ATENUADO">CTO/SMAP SINAL ATENUADO</option>
+                <option value="ADEQUAÇÃO DE REDE">ADEQUAÇÃO DE REDE</option>
+                <option value="CTO/SMAP COM PORTA SEM SINAL">CTO/SMAP COM PORTA SEM SINAL</option>
+                <option value="RECEPTOR ÓPTICO HFC SEM SINAL">RECEPTOR ÓPTICO HFC SEM SINAL</option>
+                <option value="REDE SEM SINAL/ ALTERADO - HFC">REDE SEM SINAL/ ALTERADO - HFC</option>
+                <option value="MASSIVA 100+">MASSIVA 100+</option>
+            </select>
+        </div>
+        
+        <div class="campo-grupo">
+            <span class="label">CTO:</span> 
+            <input type="text" id="cto" oninput="buscarCTO(); atualizarVisualizacao();">
+        </div>
+        
+        <div class="campo-grupo"><span class="label">CAMINHO DE REDE:</span> <input type="text" id="rede" oninput="atualizarVisualizacao()"></div>
+        <div class="campo-grupo"><span class="label">QTD CLIENTES AFETADOS:</span> <input type="text" id="clientes" oninput="atualizarVisualizacao()"></div>
+        
+        <!-- O campo OBS chama formataCampoMaiuscula() -->
+        <div class="campo-grupo"><span class="label">OBS:</span> <input type="text" id="obs" oninput="formataCampoMaiuscula(this); atualizarVisualizacao();"></div>
+        
+        <div class="secao-titulo">Endereço</div>
+        
+        <div class="campo-grupo">
+            <span class="label">LOCALIZAÇÃO:</span> 
+            <input type="text" id="localizacao" placeholder="Cole o Link Maps ou Coordenadas" oninput="buscarPorLocalizacao(); atualizarVisualizacao();">
+        </div>
+        
+        <div id="msg_distancia" class="msg-distancia"></div>
+        <div id="mapa_container">
+            <div id="mapa"></div>
+        </div>
+
+        <div class="btn-container">
+            <button class="btn-copiar" onclick="copiarTexto()">Copiar Script</button>
+            <button class="btn-limpar" onclick="limparCampos()">Limpar</button>
+        </div>
+        
+        <div class="alerta" id="alerta">✔ Script copiado com sucesso!</div>
+
+        <h3>Saída Formatada:</h3>
+        <textarea id="resultado" readonly placeholder="O texto formatado aparecerá aqui conforme digita..."></textarea>
+    </div>
+
+    <!-- ABA 2: HISTÓRICO -->
+    <div id="aba-historico" class="aba-content">
+        <p style="font-size: 14px; color: var(--text-muted); margin-top: 0;">
+            Os scripts serão gravados aqui automaticamente sempre que o campo <b>TICKET começar com "#" e possuir 15 ou mais números</b> e clicar em "Copiar Script".
+        </p>
+        <div id="lista-historico"></div>
+        <button class="btn-limpar-hist" onclick="limparHistorico()">🗑️ Apagar Todo o Histórico</button>
+    </div>
+
+</div>
+
+<!-- MODAL (SEGUNDO PLANO) PARA VER SCRIPT SALVO -->
+<div id="modal-script" class="modal-overlay" onclick="fecharModalFora(event)">
+    <div class="modal-content">
+        <span class="modal-close" onclick="fecharModal()">&times;</span>
+        <h3 style="margin-top: 0; color: var(--accent-blue);">Script Salvo</h3>
+        <p id="modal-ticket-nome" style="font-size: 13px; font-weight: bold; margin-bottom: 10px; margin-top:-10px;"></p>
+        <textarea id="modal-textarea" readonly style="width: 100%; height: 260px; font-family: 'Courier New', Courier, monospace; padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); box-sizing: border-box;"></textarea>
+        <div style="text-align: right; margin-top: 15px;">
+            <button class="btn-copiar" style="padding: 10px 20px; font-size: 14px; width: auto;" onclick="copiarDoModal()">Copiar Novamente</button>
+        </div>
+    </div>
+</div>
+
+<script>
+var baseDeDados = null;
+var mapa = null;
+var layerMarkers = null;
+
+// ==========================================
+// FUNÇÕES DE EXTRAÇÃO AUTOMÁTICA DE SCRIPT
+// ==========================================
+function processarScriptEntrada() {
+    var texto = document.getElementById('script_entrada').value;
+    if (!texto) return;
+
+    var extrairValor = function(label) {
+        var regex = new RegExp("\\*" + label + ":\\*\\s*_(.*?)_", "i");
+        var match = texto.match(regex);
+        return match ? match[1].trim() : '';
+    };
+
+    var tipo = extrairValor('Tipo');
+    var descricao = extrairValor('Descrição');
+    var time = extrairValor('Time');
+    var coordenadas = extrairValor('Coordenadas CTO');
+
+    if (tipo) {
+        var selectDesc = document.getElementById('desc_problema');
+        var tipoNormalizado = tipo.toUpperCase();
+
+        if (tipoNormalizado.indexOf('SINAL ATENUADO') !== -1) {
+            tipoNormalizado = 'CTO/SMAP SINAL ATENUADO';
+        } else if (tipoNormalizado.indexOf('FALHA EM REDE RADIO') !== -1 || tipoNormalizado.indexOf('FALHA REDE RADIO') !== -1) {
+            tipoNormalizado = 'FALHA EM REDE RADIO';
+        } else if (tipoNormalizado.indexOf('CTO SEM SINAL') !== -1) {
+            tipoNormalizado = 'CTO/SMAP SEM SINAL';
+        } else if (tipoNormalizado.indexOf('PORTA SEM SINAL') !== -1) {
+            tipoNormalizado = 'CTO/SMAP COM PORTA SEM SINAL';
+        }
+
+        var encontrouOpcao = false;
+        for (var i = 0; i < selectDesc.options.length; i++) {
+            if (selectDesc.options[i].value.toUpperCase() === tipoNormalizado) {
+                selectDesc.selectedIndex = i;
+                encontrouOpcao = true;
+                break;
+            }
+        }
+        if (!encontrouOpcao) {
+            selectDesc.selectedIndex = 0;
+        }
+    }
+
+    if (descricao) {
+        var obsInput = document.getElementById('obs');
+        obsInput.value = descricao;
+        formataCampoMaiuscula(obsInput);
+    }
+
+    if (time) {
+        var tecInput = document.getElementById('tec');
+        tecInput.value = time;
+        formataCampoMaiuscula(tecInput);
+    }
+
+    if (coordenadas) {
+        var locInput = document.getElementById('localizacao');
+        locInput.value = coordenadas;
+        buscarPorLocalizacao();
+    }
+
+    atualizarVisualizacao();
+}
+
+// ==========================================
+// FUNÇÕES DE FORMATAÇÃO DE MAIÚSCULAS/ASPAS
+// ==========================================
+function formataCampoMaiuscula(inputElement) {
+    var posStart = inputElement.selectionStart;
+    var posEnd = inputElement.selectionEnd;
+    
+    var textoOriginal = inputElement.value;
+    var partes = textoOriginal.split('"');
+    
+    for (var i = 0; i < partes.length; i++) {
+        if (i % 2 === 0) {
+            partes[i] = partes[i].toUpperCase();
+        }
+    }
+    
+    inputElement.value = partes.join('"');
+    inputElement.setSelectionRange(posStart, posEnd);
+}
+
+// ==========================================
+// FUNÇÕES DE TEMA (CLARO/ESCURO)
+// ==========================================
+function alternarTema() {
+    var isDarkMode = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('tema_escuro', isDarkMode);
+    atualizarIconeTema();
+}
+function atualizarIconeTema() {
+    var isDarkMode = document.body.classList.contains('dark-mode');
+    document.getElementById('btn-tema').innerText = isDarkMode ? '☀️' : '🌙';
+}
+function carregarTema() {
+    var temaSalvo = localStorage.getItem('tema_escuro');
+    if (temaSalvo === 'true') {
+        document.body.classList.add('dark-mode');
+    }
+    atualizarIconeTema();
+}
+
+// ==========================================
+// FUNÇÕES DO MODAL (SEGUNDO PLANO)
+// ==========================================
+function abrirModalScript(dataStr, indexOriginal) {
+    var historico = JSON.parse(localStorage.getItem('historico_scripts')) || {};
+    var itemSalvo = historico[dataStr][indexOriginal];
+    
+    if(itemSalvo) {
+        document.getElementById('modal-ticket-nome').innerText = "Referência: " + itemSalvo.ticket + " (" + itemSalvo.hora + ")";
+        document.getElementById('modal-textarea').value = itemSalvo.script || "Script antigo sem texto gravado.";
+        document.getElementById('modal-script').style.display = 'flex';
+    }
+}
+function fecharModal() {
+    document.getElementById('modal-script').style.display = 'none';
+}
+function fecharModalFora(event) {
+    if(event.target.id === 'modal-script') {
+        fecharModal();
+    }
+}
+function copiarDoModal() {
+    var texto = document.getElementById('modal-textarea').value;
+    navigator.clipboard.writeText(texto).then(function() {
+        alert('Script copiado com sucesso!');
+    }).catch(function(err) {
+        console.error('Falha ao copiar: ', err);
+    });
+}
+
+// ==========================================
+// FUNÇÕES DE NAVEGAÇÃO E HISTÓRICO
+// ==========================================
+function mudarAba(abaId) {
+    var conteudos = document.querySelectorAll('.aba-content');
+    for (var i = 0; i < conteudos.length; i++) {
+        conteudos[i].classList.remove('active');
+    }
+    var botoes = document.querySelectorAll('.tab-btn');
+    for (var j = 0; j < botoes.length; j++) {
+        botoes[j].classList.remove('active');
+    }
+    
+    document.getElementById('aba-' + abaId).classList.add('active');
+    document.getElementById('btn-' + abaId).classList.add('active');
+
+    if (abaId === 'formulario' && mapa) {
+        setTimeout(function() { mapa.invalidateSize(); }, 100);
+    }
+}
+
+function carregarHistorico() {
+    var lista = document.getElementById('lista-historico');
+    var historico = JSON.parse(localStorage.getItem('historico_scripts')) || {};
+    lista.innerHTML = '';
+
+    var datas = Object.keys(historico).sort(function(a, b) {
+        return b.split('/').reverse().join('') - a.split('/').reverse().join('');
+    });
+
+    if (datas.length === 0) {
+        lista.innerHTML = '<div class="vazio-msg">Nenhum script foi registado ainda.</div>';
+        return;
+    }
+
+    datas.forEach(function(dataStr) {
+        var itens = historico[dataStr];
+        var card = document.createElement('div');
+        card.className = 'historico-card';
+        
+        var htmlCard = '<div class="historico-data-titulo">' +
+                       '<span>📅 ' + dataStr + '</span>' +
+                       '<span class="badge-qtd">' + itens.length + ' script(s)</span>' +
+                       '</div>';
+        
+        itens.slice().reverse().forEach(function(item, revIndex) {
+            var originalIndex = itens.length - 1 - revIndex;
+            var chatTexto = item.chat ? ' &nbsp;|&nbsp; <b>CHAT:</b> ' + item.chat : '';
+            
+            htmlCard += '<div class="historico-item">' +
+                        '<span><b>Ticket:</b> <span class="ticket-link" onclick="abrirModalScript(\'' + dataStr + '\', ' + originalIndex + ')">' + item.ticket + '</span>' + chatTexto + '</span>' +
+                        '<span style="color:var(--text-muted);">🕒 ' + item.hora + '</span>' +
+                        '</div>';
+        });
+        
+        card.innerHTML = htmlCard;
+        lista.appendChild(card);
+    });
+}
+
+function registarHistorico() {
+    var ticketVal = document.getElementById('ticket').value.trim();
+    var chatVal = document.getElementById('chat').value.trim(); 
+    var numerosApenas = ticketVal.replace(/\D/g, '');
+    var textoScriptFormatado = document.getElementById('resultado').value;
+
+    if (ticketVal.startsWith('#') && numerosApenas.length >= 15) {
+        var agora = new Date();
+        var dataHoje = agora.toLocaleDateString('pt-PT');
+        var horaAgra = agora.toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
+        
+        var historico = JSON.parse(localStorage.getItem('historico_scripts')) || {};
+        
+        if (!historico[dataHoje]) {
+            historico[dataHoje] = [];
+        }
+
+        var jaGravado = historico[dataHoje].some(function(item) { return item.ticket === ticketVal; });
+        
+        if (!jaGravado) {
+            historico[dataHoje].push({
+                ticket: ticketVal,
+                chat: chatVal, 
+                hora: horaAgra,
+                script: textoScriptFormatado
+            });
+            localStorage.setItem('historico_scripts', JSON.stringify(historico));
+            carregarHistorico();
+        }
+    }
+}
+
+function limparHistorico() {
+    if (confirm("Tem a certeza que deseja apagar todo o histórico gravado?")) {
+        localStorage.removeItem('historico_scripts');
+        carregarHistorico();
+    }
+}
+
+// ==========================================
+// FUNÇÕES PRINCIPAIS DO SISTEMA
+// ==========================================
+window.onload = function() {
+    carregarTema(); 
+    carregarHistorico(); 
+
+    window['fetch']('dados_extraidos_postes_2.json')
+        .then(function(response) {
+            if (!response.ok) throw new Error("Não foi possível carregar via web");
+            return response.json();
+        })
+        .then(function(data) {
+            baseDeDados = data;
+            marcarBaseCarregada();
+            document.getElementById('upload_container').style.display = 'none';
+        })
+        .catch(function(err) {
+            console.log("Modo local detetado. A aguardar upload manual.");
+        });
+        
+    atualizarVisualizacao();
+};
+
+function carregarBaseJSON(event) {
+    var arquivo = event.target.files[0];
+    if (!arquivo) return;
+
+    var leitor = new FileReader();
+    leitor.onload = function(e) {
+        try {
+            baseDeDados = JSON.parse(e.target.result);
+            marcarBaseCarregada();
+        } catch (erro) {
+            alert("Erro ao ler o ficheiro JSON. Verifique se é um JSON válido.");
+        }
+    };
+    leitor.readAsText(arquivo);
+}
+
+function marcarBaseCarregada() {
+    var statusDiv = document.getElementById('status_bd');
+    var tamanho = Array.isArray(baseDeDados) ? baseDeDados.length : Object.keys(baseDeDados).length;
+    statusDiv.innerText = "✔ Base de dados carregada com sucesso! (" + tamanho + " registos).";
+    statusDiv.classList.add('status-ok');
+    statusDiv.classList.remove('status-bd');
+}
+
+function normalizarCTO(texto) {
+    return String(texto || "").trim().toUpperCase().replace(/[\\/]+/g, '/');
+}
+
+function extrairCoordenadas(texto) {
+    var regexCoords = /(-?\d{1,2}[.,]\d+)[^\d-]+(-?\d{1,3}[.,]\d+)/;
+    var match = texto.match(regexCoords);
+    if (match) {
+        return {
+            lat: parseFloat(match[1].replace(',', '.')),
+            lon: parseFloat(match[2].replace(',', '.'))
+        };
+    }
+    return null;
+}
+
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+    var R = 6371; 
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; 
+}
+
+function preencherDados(dadoEncontrado) {
+    if (!dadoEncontrado) return;
+
+    var nomeCidade = "";
+    if (dadoEncontrado.cidade) {
+        nomeCidade = dadoEncontrado.cidade;
+    } else if (dadoEncontrado.municipio) {
+        nomeCidade = dadoEncontrado.municipio;
+    }
+
+    if (nomeCidade) {
+        var uf = dadoEncontrado.uf || dadoEncontrado.UF || dadoEncontrado.estado || dadoEncontrado.ESTADO;
+        if (uf) {
+            document.getElementById('cidade').value = nomeCidade + " - " + uf;
+        } else {
+            document.getElementById('cidade').value = nomeCidade;
+        }
+    }
+
+    if (dadoEncontrado.caminho) {
+        document.getElementById('rede').value = dadoEncontrado.caminho;
+    }
+    
+    if (dadoEncontrado.latitude && dadoEncontrado.longitude) {
+        var lat = String(dadoEncontrado.latitude).trim().replace(',', '.');
+        var lon = String(dadoEncontrado.longitude).trim().replace(',', '.');
+        document.getElementById('localizacao').value = "https://maps.google.com/?q=" + lat + "," + lon;
+    }
+}
+
+function desenharMapa(latCentro, lonCentro, posteMaisProximo, postesNoRaio) {
+    var mapContainer = document.getElementById('mapa_container');
+    mapContainer.style.display = 'block';
+
+    if (!mapa) {
+        mapa = L.map('mapa');
+        
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri'
+        }).addTo(mapa);
+        
+        layerMarkers = L.layerGroup().addTo(mapa);
+    }
+
+    setTimeout(function() {
+        mapa.invalidateSize();
+        mapa.setView([latCentro, lonCentro], 17);
+        layerMarkers.clearLayers();
+
+        L.circle([latCentro, lonCentro], {
+            color: '#107c41',
+            fillColor: '#107c41',
+            fillOpacity: 0.1,
+            radius: 115
+        }).addTo(layerMarkers);
+
+        L.circleMarker([latCentro, lonCentro], {
+            color: 'blue',
+            fillColor: '#3388ff',
+            fillOpacity: 0.9,
+            radius: 7
+        }).bindPopup('📍 <b>Sua Busca</b>').addTo(layerMarkers);
+
+        postesNoRaio.forEach(function(p) {
+            var isClosest = (p.poste === posteMaisProximo.poste);
+            if (isClosest) {
+                L.circleMarker([p.latValid, p.lonValid], {
+                    color: 'red',
+                    fillColor: '#ff0033',
+                    fillOpacity: 1,
+                    radius: 9
+                }).bindPopup("<b>🔥 MAIS PRÓXIMO: " + p.poste + "</b><br>Distância: " + p.distMetros + "m").addTo(layerMarkers).openPopup();
+            } else {
+                L.circleMarker([p.latValid, p.lonValid], {
+                    color: '#e67e22',
+                    fillColor: '#e67e22',
+                    fillOpacity: 0.8,
+                    radius: 5
+                }).bindPopup("<b>" + p.poste + "</b><br>Distância: " + p.distMetros + "m").addTo(layerMarkers);
+            }
+        });
+
+    }, 200);
+}
+
+function buscarCTO() {
+    var ctoInput = document.getElementById('cto');
+    var textoDigitado = ctoInput.value.trim();
+    
+    if (textoDigitado === '' || !baseDeDados) return;
+
+    var arrayDados = Array.isArray(baseDeDados) ? baseDeDados : Object.values(baseDeDados);
+    var ctoDigitadaNormalizada = normalizarCTO(textoDigitado);
+    
+    var dadoEncontrado = arrayDados.find(function(item) {
+        var posteAtual = normalizarCTO(item.poste);
+        return posteAtual === ctoDigitadaNormalizada;
+    });
+
+    if (dadoEncontrado) {
+        preencherDados(dadoEncontrado);
+    }
+}
+
+// ==========================================
+// BUSCA COM 3 SERVIDORES DIFERENTES (REDUNDÂNCIA)
+// ==========================================
+function buscarPorLocalizacao() {
+    var locInput = document.getElementById('localizacao');
+    var msgDistancia = document.getElementById('msg_distancia');
+    var mapContainer = document.getElementById('mapa_container');
+    
+    var textoDigitado = locInput.value.trim();
+    var exibir = ['b','l','o','c','k'].join(''); 
+    
+    msgDistancia.style.display = 'none';
+    mapContainer.style.display = 'none'; 
+    
+    if (textoDigitado === '' || typeof baseDeDados === 'undefined' || !baseDeDados) return;
+
+    if (textoDigitado.indexOf('maps.app.goo.gl') !== -1 || textoDigitado.indexOf('goo.gl/maps') !== -1) {
+        
+        msgDistancia.innerText = "⏳ A descodificar link (Tentativa 1/3: Servidor Principal)...";
+        msgDistancia.style.color = "#64748b"; 
+        msgDistancia.style.display = exibir;
+        
+        // 1ª TENTATIVA: unshorten.me
+        window['fetch']("https://unshorten.me/json/" + encodeURIComponent(textoDigitado))
+            .then(function(res) { return res.json(); })
+            .then(function(dados) {
+                if (dados && dados.resolved_url) {
+                    processarCoordenadasFinais(dados.resolved_url, exibir);
+                } else {
+                    throw new Error("Falha 1");
+                }
+            })
+            .catch(function() {
+                
+                // 2ª TENTATIVA: allorigins.win
+                msgDistancia.innerText = "⏳ A descodificar link (Tentativa 2/3: Servidor Proxy Alternativo)...";
+                window['fetch']("https://api.allorigins.win/raw?url=" + encodeURIComponent(textoDigitado))
+                    .then(function(res) { return res.text(); })
+                    .then(function(textoHTML) {
+                        var expReg = /@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/;
+                        var match = textoHTML.match(expReg);
+                        if (match) {
+                            processarCoordenadasFinais("https://maps.google.com/?q=" + match[1] + "," + match[2], exibir);
+                        } else {
+                            throw new Error("Falha 2");
+                        }
+                    })
+                    .catch(function() {
+                        
+                        // 3ª TENTATIVA: codetabs.com
+                        msgDistancia.innerText = "⏳ A descodificar link (Tentativa 3/3: Servidor de Emergência)...";
+                        window['fetch']("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(textoDigitado))
+                            .then(function(res) { return res.text(); })
+                            .then(function(textoHTML3) {
+                                var expReg3 = /@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/;
+                                var match3 = textoHTML3.match(expReg3);
+                                if (match3) {
+                                    processarCoordenadasFinais("https://maps.google.com/?q=" + match3[1] + "," + match3[2], exibir);
+                                } else {
+                                    throw new Error("Falha 3");
+                                }
+                            })
+                            .catch(function() {
+                                // SE OS 3 FALHAREM
+                                msgDistancia.innerText = "❌ Falha nos 3 servidores de rede. O Firewall desta rede ou PC está bloqueando os acessos externos. Por favor, cole as coordenadas manuais (ex: -23.55, -46.63) no lugar do link.";
+                                msgDistancia.style.color = "#d13438"; 
+                            });
+                    });
+            });
+        
+        return; 
+    }
+
+    // Se já for coordenada ou link direto (não encurtado)
+    processarCoordenadasFinais(textoDigitado, exibir);
+}
+
+function processarCoordenadasFinais(linkFinal, exibir) {
+    var msgDistancia = document.getElementById('msg_distancia');
+    var mapContainer = document.getElementById('mapa_container');
+    msgDistancia.style.color = "#107c41"; 
+    
+    var arrayDados = Array.isArray(baseDeDados) ? baseDeDados : Object.values(baseDeDados);
+    var coordsUsuario = extrairCoordenadas(linkFinal);
+
+    if (coordsUsuario) {
+        var menorDist = Infinity;
+        var posteProx = null;
+        var postesRaio = [];
+
+        arrayDados.forEach(function(item) {
+            if (item.latitude && item.longitude) {
+                var latItem = parseFloat(String(item.latitude).replace(',', '.'));
+                var lonItem = parseFloat(String(item.longitude).replace(',', '.'));
+                
+                if (!isNaN(latItem) && !isNaN(lonItem)) {
+                    var distancia = calcularDistancia(coordsUsuario.lat, coordsUsuario.lon, latItem, lonItem);
+                    
+                    if (distancia <= 0.115) {
+                        postesRaio.push({
+                            poste: item.poste,
+                            latValid: latItem,
+                            lonValid: lonItem,
+                            distMetros: Math.round(distancia * 1000)
+                        });
+                    }
+
+                    if (distancia < menorDist) {
+                        menorDist = distancia;
+                        posteProx = item;
+                    }
+                }
+            }
+        });
+
+        if (posteProx) {
+            var distM = Math.round(menorDist * 1000); 
+            
+            if (distM <= 115) {
+                msgDistancia.innerText = "📍 Poste mais próximo encontrado a " + distM + " metros. A exibir mapa...";
+                msgDistancia.style.color = "#107c41";
+                msgDistancia.style.display = exibir;
+                
+                document.getElementById('cto').value = posteProx.poste;
+                preencherDados(posteProx);
+                atualizarVisualizacao();
+                
+                desenharMapa(coordsUsuario.lat, coordsUsuario.lon, posteProx, postesRaio);
+
+            } else {
+                msgDistancia.innerText = "❌ Nenhum poste no raio de 115m. (O mais próximo está a " + distM + "m).";
+                msgDistancia.style.color = "#d13438";
+                msgDistancia.style.display = exibir;
+            }
+        } else {
+            msgDistancia.innerText = "❌ Nenhum poste com coordenadas válidas encontrado na base de dados.";
+            msgDistancia.style.color = "#d13438";
+            msgDistancia.style.display = exibir;
+        }
+    } else {
+        msgDistancia.innerText = "❌ Coordenadas não detetadas no link/texto.";
+        msgDistancia.style.color = "#d13438";
+        msgDistancia.style.display = exibir;
+    }
+}
+
+function pegarValor(id) {
+    var elemento = document.getElementById(id);
+    return elemento ? elemento.value.trim() : '';
+}
+
+function gerarTextoScript() {
+    return "TICKET: " + pegarValor('ticket') + "\n" +
+           "OS R.E: " + pegarValor('os_re') + "\n" +
+           "CHAT: " + pegarValor('chat') + "\n" +
+           "TEC: " + pegarValor('tec') + "\n" +
+           "CIDADE: " + pegarValor('cidade') + "\n\n" +
+           "DESCRIÇÃO DO PROBLEMA: " + pegarValor('desc_problema') + "\n" +
+           "CTO: " + pegarValor('cto') + "\n" +
+           "CAMINHO DE REDE: " + pegarValor('rede') + "\n" +
+           "QUANTIDADE DE CLIENTES AFETADOS: " + pegarValor('clientes') + "\n" +
+           "OBS: " + pegarValor('obs') + "\n\n" +
+           "LOCALIZAÇÃO: " + pegarValor('localizacao');
+}
+
+function atualizarVisualizacao() {
+    var resultadoTextArea = document.getElementById('resultado');
+    if (resultadoTextArea) {
+        resultadoTextArea.value = gerarTextoScript();
+    }
+}
+
+function copiarTexto() {
+    var textoFormatado = gerarTextoScript();
+    atualizarVisualizacao();
+    
+    navigator.clipboard.writeText(textoFormatado).then(function() {
+        registarHistorico();
+        var alerta = document.getElementById('alerta');
+        if (alerta) {
+            alerta.style.display = 'block';
+            setTimeout(function() { alerta.style.display = 'none'; }, 2500);
+        }
+    }).catch(function(err) {
+        console.error('Falha ao copiar o texto: ', err);
+    });
+}
+
+function limparCampos() {
+    var msgDistancia = document.getElementById('msg_distancia');
+    var mapContainer = document.getElementById('mapa_container');
+    
+    if (msgDistancia) msgDistancia.style.display = 'none';
+    if (mapContainer) mapContainer.style.display = 'none';
+
+    var campos = ['script_entrada', 'ticket', 'os_re', 'chat', 'tec', 'cidade', 'desc_problema', 'cto', 'rede', 'clientes', 'obs', 'localizacao'];
+    campos.forEach(function(id) {
+        var elemento = document.getElementById(id);
+        if (elemento) {
+            if (elemento.tagName === 'SELECT') {
+                elemento.selectedIndex = 0;
+            } else {
+                elemento.value = '';
+            }
+        }
+    });
+    atualizarVisualizacao();
+}
+</script>
+</body>
+</html>
